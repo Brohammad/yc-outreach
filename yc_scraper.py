@@ -133,6 +133,7 @@ def process(hit):
             "email_guesses": guesses(name, domain) if resolves else [],
         })
     return {
+        "slug": slug,
         "name": hit["name"],
         "batch": hit.get("batch"),
         "yc_url": f"https://www.ycombinator.com/companies/{slug}",

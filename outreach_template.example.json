@@ -1,0 +1,8 @@
+{
+  "my_name": "Jane Doe",
+  "portfolio": "https://example.com",
+  "github": "https://github.com/janedoe",
+  "resume": "https://example.com/resume.pdf",
+  "subject": "interested in {company}",
+  "body": "Hey {first_name},\n\nsaw {company} and {one_liner} really stood out.\n\n[1-2 lines about you]\n\nwould love to explore if there's a role at {company}.\n\n- {my_name}\nportfolio: {portfolio}\ngithub: {github}\nresume: {resume}"
+}

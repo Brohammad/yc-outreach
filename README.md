@@ -113,6 +113,29 @@ python3 yc_scraper.py --batches "Winter 2024" "Summer 2024" --out yc_founders   
 python3 apify_enrich.py --input yc_founders.json --out yc_founders_enriched      # needs APIFY_TOKEN
 ```
 
+### Automated scheduled sending (SMTP)
+
+`outreach_mailer.py` builds a send queue from scraped JSON and actually delivers mail when
+`run` is due (stdlib `smtplib`, cron-friendly). Copy `outreach_template.example.json` to
+`outreach_template.json`, fill in your details, then:
+
+```
+cp outreach_template.example.json outreach_template.json   # edit subject/body
+python3 outreach_mailer.py plan --input yc_founders_enriched.json --template outreach_template.json \\
+  --start "2026-11-08T09:00:00+05:30" --every 15m --merge
+python3 outreach_mailer.py run --queue outreach_queue.json          # send what's due now
+python3 outreach_mailer.py status --queue outreach_queue.json
+```
+
+Put `run` on a schedule (e.g. every minute with cron or a timer). Each company gets one
+message to the best founder email (same ranking as the web UI) unless you pass `--all-founders`.
+Use `--only-email valid,unknown` to skip pattern guesses.
+
+Required env vars (or `.env` beside the script): `OUTREACH_SMTP_HOST`, `OUTREACH_SMTP_USER`,
+`OUTREACH_SMTP_PASSWORD`, `OUTREACH_FROM`. Optional: `OUTREACH_SMTP_PORT` (default 587),
+`OUTREACH_REPLY_TO`, `OUTREACH_SMTP_SSL` (set for port 465). Test with
+`python3 outreach_mailer.py run --dry-run`.
+
 `yc_scraper.py` flags: `--batches` (default `"Summer 2026" "Fall 2026"`), `--out`, `--workers` (default 12),
 `--limit` (first N companies, for testing). It checks six contact pages per site and retries, so it's slower but
 more thorough than the web API.
