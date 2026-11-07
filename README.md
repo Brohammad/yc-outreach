@@ -140,6 +140,12 @@ cp outreach_template.example.json outreach_template.json   # edit subject/body
 python3 outreach_mailer.py plan --input yc_founders_enriched.json --template outreach_template.json \\
   --start "2026-11-08T09:00:00+05:30" --every 15m --merge
 python3 outreach_mailer.py run --queue outreach_queue.json          # send what's due now
+
+**macOS auto-send:** with `.env` and `outreach_queue.json` in the repo root:
+
+```bash
+./scripts/setup_mac_sender.sh   # launchd, every 60s
+```
 python3 outreach_mailer.py status --queue outreach_queue.json
 ```
 
