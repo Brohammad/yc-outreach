@@ -48,7 +48,7 @@ footer{color:var(--muted);font-size:13px;margin-top:32px}
   <h2>2. Email template</h2>
   <label class="f">Subject<input data-k="subject"></label>
   <label class="f" style="margin-top:10px">Body<textarea data-k="body"></textarea></label>
-  <p class="ph" id="vars">Click to insert: <code>{first_name}</code><code>{company}</code><code>{one_liner}</code><code>{batch}</code><code>{hook}</code><code>{industry_niche}</code><code>{role_aim}</code><code>{stack_pitch}</code><code>{proof_line}</code><code>{my_name}</code><code>{portfolio}</code><code>{github}</code><code>{resume}</code>
+  <p class="ph" id="vars">Per company we pick an ML or backend angle from industry/tags. Placeholders: <code>{first_name}</code><code>{company}</code><code>{one_liner}</code><code>{batch}</code><code>{hook}</code><code>{value_prop}</code><code>{role_aim}</code><code>{stack_pitch}</code><code>{proof_line}</code><code>{my_name}</code><code>{portfolio}</code><code>{github}</code><code>{resume}</code>
   &nbsp;<button id="reset" type="button">Reset template</button></p>
   <p class="ph">Lines like <code>resume: {resume}</code> are dropped when you leave that field empty. Email labels: <span class="badge valid">verified</span> / <span class="badge unknown">unverified</span> come from Apify (step 4), <span class="badge site">on site</span> is listed on the company's website, <span class="badge guess">guess</span> is the most common pattern (right about 80% of the time) and may bounce.</p>
 </section>
@@ -88,19 +88,25 @@ footer{color:var(--muted);font-size:13px;margin-top:32px}
 <footer>Open source. Company and founder data comes from YC's public directory. Please write to people one at a time and respect "no".</footer>
 </main>
 <script>
+const ML_SIGNALS = /\b(ai|artificial intelligence|machine learning|\bml\b|llm|nlp|rag|neural|generative|computer vision|deep learning|transformer|embedding|inference|foundation model)\b/i;
 const DEFAULTS = {
   my_name: "Aabid Mohamed", portfolio: "", github: "https://github.com/Brohammad-coder", resume: "",
-  role_aim: "a founding or early backend role where I own APIs, data, and reliability from day one",
-  stack_pitch: "FastAPI, PostgreSQL, Docker, auth, and production LLM workflows (LangChain, transformers, eval + guardrails)",
   proof_line: "NIT Calicut '25 · shipping at PwC · built ML/LLM product flows at School Hack.AI",
-  subject: "{company} — backend + LLM engineer ({batch})",
+  role_aim_backend: "a founding or early backend role where I own APIs, data, and reliability from day one",
+  role_aim_ml: "an early ML/LLM role where I own evals, RAG pipelines, and the serving layer founders ship against",
+  stack_pitch_backend: "FastAPI, PostgreSQL, Docker, auth, observability, and boringly reliable REST",
+  stack_pitch_ml: "Python ML stack, LangChain, OpenAI APIs, transformers, eval/guardrails, plus FastAPI for serving",
+  value_prop_backend: `Concrete angle for you: I can own the services and data model behind {one_liner} — shipping fast without the "rewrite at 10k users" tax.`,
+  value_prop_ml: "Concrete angle for you: I can tighten the loop on {one_liner} — datasets, offline evals, prompt/guardrail iteration, and APIs that keep latency and cost predictable.",
+  subject_backend: "{company} — early backend engineer ({batch})",
+  subject_ml: "{company} — ML/LLM engineer ({batch})",
   body: `Hey {first_name},
 
 {hook}
 
-I'm Aabid — full-stack engineer with a backend/ML spine ({proof_line}). I work in {stack_pitch}. I'm deliberately targeting early teams; I'm reaching out because {company} maps to {role_aim}.
+I'm Aabid — engineer with a backend/ML spine ({proof_line}). I work in {stack_pitch}. I'm deliberately targeting early teams; I'm reaching out because {company} maps to {role_aim}.
 
-Concrete angle for you: I can take ownership of the services and data model behind {one_liner} — shipping fast without the "rewrite at 10k users" tax.
+{value_prop}
 
 If you're opening eng capacity this quarter, could we do 15 minutes this week? I'll come with relevant work ({github}) and questions that respect your time.
 
@@ -144,16 +150,36 @@ function contacts(c) {
   return [...(c.founders || [])].sort((a, b) => (RANK[best(a).kind] - RANK[best(b).kind]) || (!/ceo/i.test(a.title) - !/ceo/i.test(b.title)));
 }
 
+function companyBlob(c) {
+  return [c.industry, c.one_liner, c.description, ...(c.tags || [])].filter(Boolean).join(" ");
+}
+function outreachVariant(c) {
+  const blob = companyBlob(c);
+  if (ML_SIGNALS.test(blob)) return "ml";
+  const ind = (c.industry || "").toUpperCase();
+  if (ind.startsWith("AI") || ind.includes("ARTIFICIAL INTELLIGENCE")) return "ml";
+  return "backend";
+}
+function variantPick(key, v) { return tpl[`${key}_${v}`] || tpl[key] || ""; }
 function industryFocus(c) {
   const ind = c.industry || "";
   if (ind.includes("->")) return ind.split("->").pop().trim();
   if (c.tags?.length) return c.tags[0];
   return ind || "your market";
 }
-function companyHook(c) {
+function companyHook(c, v) {
   const name = c.name || "you", batch = c.batch || "your batch";
   const one = (c.one_liner || "").replace(/\.$/, "").trim();
   const niche = industryFocus(c);
+  if (v === "ml") {
+    if (one && niche && niche !== "your market") {
+      return `I've been watching ${name} since ${batch} — ${one.toLowerCase()} in ${niche.toLowerCase()} is exactly the kind of problem where model quality and production serving have to move together, not in separate silos.`;
+    }
+    if (one) {
+      return `What you're building around ${one.toLowerCase()} at ${name} is the stage where I'd want to own evals, RAG/LLM glue, and the API surface founders can actually ship on.`;
+    }
+    return `${name} kept coming up while I short-listed teams shipping real ML in production, not demos.`;
+  }
   if (one && niche && niche !== "your market") {
     return `I've been tracking ${name} since ${batch} — ${one.toLowerCase()} is a focused bet in ${niche.toLowerCase()}, and it's the kind of product I'd want backend ownership on early.`;
   }
@@ -162,17 +188,32 @@ function companyHook(c) {
   }
   return `${name} kept landing on my short list while I filtered for teams where engineers ship backend and ML together, not slide decks.`;
 }
+function variantFields(c) {
+  const v = outreachVariant(c);
+  return {
+    variant: v,
+    hook: companyHook(c, v),
+    role_aim: variantPick("role_aim", v),
+    stack_pitch: variantPick("stack_pitch", v),
+    value_prop: variantPick("value_prop", v),
+  };
+}
 function fill(text, c) {
   const f = contacts(c)[0] || { name: "" };
+  const vf = variantFields(c);
   const vars = {
     first_name: f.name.split(" ")[0] || "there", company: c.name,
     one_liner: (c.one_liner || "what you're building").replace(/\.$/, "").toLowerCase(),
-    batch: c.batch, industry_niche: industryFocus(c).toLowerCase(), hook: companyHook(c),
+    batch: c.batch, industry_niche: industryFocus(c).toLowerCase(),
     my_name: tpl.my_name, portfolio: tpl.portfolio, github: tpl.github, resume: tpl.resume,
-    role_aim: tpl.role_aim, stack_pitch: tpl.stack_pitch, proof_line: tpl.proof_line,
+    proof_line: tpl.proof_line, ...vf,
   };
   const out = text.replace(/\{(\w+)\}/g, (m, k) => k in vars ? vars[k] : m);
   return out.split("\n").filter(l => !/^\s*[\w ]+:\s*$/.test(l)).join("\n");
+}
+function subjectFor(c) {
+  const v = outreachVariant(c);
+  return fill(variantPick("subject", v) || "{company}", c);
 }
 
 function rolesLine(c) {
@@ -216,7 +257,7 @@ function render() {
 
 // Fill drafts lazily when opened, and refresh open ones when the template changes
 function draft(d) {
-  const c = DATA[d.dataset.i], to = contacts(c)[0], subject = fill(tpl.subject, c), body = fill(tpl.body, c);
+  const c = DATA[d.dataset.i], to = contacts(c)[0], subject = subjectFor(c), body = fill(tpl.body, c);
   d.querySelector(".subj").textContent = subject;
   d.querySelector("pre").textContent = body;
   d.querySelector(".mail").href = `mailto:${encodeURIComponent(to ? best(to).email : "")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

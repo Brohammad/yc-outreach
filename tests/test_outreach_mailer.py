@@ -14,6 +14,30 @@ import outreach_mailer as om  # noqa: E402
 
 
 class OutreachMailerTests(unittest.TestCase):
+    def test_outreach_variant_ml_for_ai_industry(self):
+        self.assertEqual(om.outreach_variant({"industry": "AI", "one_liner": "Docs search"}), "ml")
+        self.assertEqual(om.outreach_variant({"industry": "B2B", "one_liner": "Payroll API"}), "backend")
+
+    def test_fill_rotates_value_prop_by_variant(self):
+        company_ml = {"name": "BotCo", "batch": "W24", "one_liner": "Copilot.", "industry": "AI"}
+        founder = {"name": "Ann Lee"}
+        tpl = {
+            "my_name": "A",
+            "portfolio": "",
+            "github": "https://github.com/x",
+            "resume": "",
+            "proof_line": "p",
+            "role_aim_ml": "ml role",
+            "role_aim_backend": "be role",
+            "stack_pitch_ml": "transformers",
+            "stack_pitch_backend": "fastapi",
+            "value_prop_ml": "ML path for {one_liner}",
+            "value_prop_backend": "BE path for {one_liner}",
+            "body": "{value_prop}",
+        }
+        body = om.fill(tpl["body"], company_ml, founder, tpl)
+        self.assertIn("ML path", body)
+
     def test_company_hook_uses_one_liner_and_industry(self):
         company = {
             "name": "Acme",

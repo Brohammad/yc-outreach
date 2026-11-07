@@ -3,9 +3,14 @@
   "portfolio": "",
   "github": "https://github.com/Brohammad-coder",
   "resume": "",
-  "role_aim": "a founding or early backend role where I own APIs, data, and reliability from day one",
-  "stack_pitch": "FastAPI, PostgreSQL, Docker, auth, and production LLM workflows (LangChain, transformers, eval + guardrails)",
   "proof_line": "NIT Calicut '25 · shipping at PwC · built ML/LLM product flows at School Hack.AI",
-  "subject": "{company} — backend + LLM engineer ({batch})",
-  "body": "Hey {first_name},\n\n{hook}\n\nI'm Aabid — full-stack engineer with a backend/ML spine ({proof_line}). I work in {stack_pitch}. I'm deliberately targeting early teams; I'm reaching out because {company} maps to {role_aim}.\n\nConcrete angle for you: I can take ownership of the services and data model behind {one_liner} — shipping fast without the \"rewrite at 10k users\" tax.\n\nIf you're opening eng capacity this quarter, could we do 15 minutes this week? I'll come with relevant work ({github}) and questions that respect your time.\n\nBest,\n{my_name}\nportfolio: {portfolio}\ngithub: {github}\nresume: {resume}"
+  "role_aim_backend": "a founding or early backend role where I own APIs, data, and reliability from day one",
+  "role_aim_ml": "an early ML/LLM role where I own evals, RAG pipelines, and the serving layer founders ship against",
+  "stack_pitch_backend": "FastAPI, PostgreSQL, Docker, auth, observability, and boringly reliable REST",
+  "stack_pitch_ml": "Python ML stack, LangChain, OpenAI APIs, transformers, eval/guardrails, plus FastAPI for serving",
+  "value_prop_backend": "Concrete angle for you: I can own the services and data model behind {one_liner} — shipping fast without the \"rewrite at 10k users\" tax.",
+  "value_prop_ml": "Concrete angle for you: I can tighten the loop on {one_liner} — datasets, offline evals, prompt/guardrail iteration, and APIs that keep latency and cost predictable.",
+  "subject_backend": "{company} — early backend engineer ({batch})",
+  "subject_ml": "{company} — ML/LLM engineer ({batch})",
+  "body": "Hey {first_name},\n\n{hook}\n\nI'm Aabid — engineer with a backend/ML spine ({proof_line}). I work in {stack_pitch}. I'm deliberately targeting early teams; I'm reaching out because {company} maps to {role_aim}.\n\n{value_prop}\n\nIf you're opening eng capacity this quarter, could we do 15 minutes this week? I'll come with relevant work ({github}) and questions that respect your time.\n\nBest,\n{my_name}\nportfolio: {portfolio}\ngithub: {github}\nresume: {resume}"
 }

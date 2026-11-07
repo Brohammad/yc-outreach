@@ -41,6 +41,11 @@ ENV_KEYS = (
 )
 
 RANK = {"valid": 0, "unknown": 1, "site": 2, "guess": 3, "none": 4}
+ML_SIGNALS = re.compile(
+    r"\b(ai|artificial intelligence|machine learning|\bml\b|llm|nlp|rag|neural|"
+    r"generative|computer vision|deep learning|transformer|embedding|inference|foundation model)\b",
+    re.I,
+)
 
 
 def load_dotenv() -> None:
@@ -112,6 +117,33 @@ def best_email(founder: dict) -> tuple[str, str]:
     return "", "none"
 
 
+def company_text_blob(company: dict) -> str:
+    tags = company.get("tags")
+    tag_txt = " ".join(tags) if isinstance(tags, list) else ""
+    return " ".join(
+        [
+            company.get("industry") or "",
+            company.get("one_liner") or "",
+            company.get("description") or "",
+            tag_txt,
+        ]
+    )
+
+
+def outreach_variant(company: dict) -> str:
+    blob = company_text_blob(company)
+    if ML_SIGNALS.search(blob):
+        return "ml"
+    ind = (company.get("industry") or "").strip().upper()
+    if ind.startswith("AI") or "ARTIFICIAL INTELLIGENCE" in ind:
+        return "ml"
+    return "backend"
+
+
+def variant_pick(tpl: dict, key: str, variant: str) -> str:
+    return (tpl.get(f"{key}_{variant}") or tpl.get(key) or "").strip()
+
+
 def industry_focus(company: dict) -> str:
     ind = (company.get("industry") or "").strip()
     if "->" in ind:
@@ -123,11 +155,27 @@ def industry_focus(company: dict) -> str:
     return ind or "your market"
 
 
-def company_hook(company: dict) -> str:
+def company_hook(company: dict, variant: str = "backend") -> str:
     name = company.get("name") or "you"
     batch = company.get("batch") or "your batch"
     one = (company.get("one_liner") or "").strip().rstrip(".")
     niche = industry_focus(company)
+    if variant == "ml":
+        if one and niche and niche != "your market":
+            return (
+                f"I've been watching {name} since {batch} — {one.lower()} in {niche.lower()} is "
+                f"exactly the kind of problem where model quality and production serving have to "
+                f"move together, not in separate silos."
+            )
+        if one:
+            return (
+                f"What you're building around {one.lower()} at {name} is the stage where I'd want "
+                f"to own evals, RAG/LLM glue, and the API surface founders can actually ship on."
+            )
+        return (
+            f"{name} kept coming up while I short-listed teams shipping real ML in production, "
+            f"not demos."
+        )
     if one and niche and niche != "your market":
         return (
             f"I've been tracking {name} since {batch} — {one.lower()} is a focused bet in "
@@ -159,24 +207,33 @@ def pick_founder(company: dict, all_founders: bool) -> list[dict]:
     return [founders[0]]
 
 
-def fill(text: str, company: dict, founder: dict, tpl: dict) -> str:
+def subject_for(company: dict, tpl: dict, founder: dict) -> str:
+    variant = outreach_variant(company)
+    raw = variant_pick(tpl, "subject", variant) or "{company}"
+    return fill(raw, company, founder, tpl, variant=variant)
+
+
+def fill(text: str, company: dict, founder: dict, tpl: dict, *, variant: str | None = None) -> str:
     first = (founder.get("name") or "").split()
     first_name = first[0] if first else "there"
     one_liner = (company.get("one_liner") or "what you're building").rstrip(".").lower()
+    variant = variant or outreach_variant(company)
     vars_ = {
         "first_name": first_name,
         "company": company.get("name") or "",
         "one_liner": one_liner,
         "batch": company.get("batch") or "",
         "industry_niche": industry_focus(company).lower(),
-        "hook": company_hook(company),
+        "variant": variant,
+        "hook": company_hook(company, variant),
         "my_name": tpl.get("my_name") or "",
         "portfolio": tpl.get("portfolio") or "",
         "github": tpl.get("github") or "",
         "resume": tpl.get("resume") or "",
-        "role_aim": tpl.get("role_aim") or "",
-        "stack_pitch": tpl.get("stack_pitch") or "",
+        "role_aim": variant_pick(tpl, "role_aim", variant),
+        "stack_pitch": variant_pick(tpl, "stack_pitch", variant),
         "proof_line": tpl.get("proof_line") or "",
+        "value_prop": variant_pick(tpl, "value_prop", variant),
     }
 
     def repl(m: re.Match) -> str:
@@ -226,8 +283,9 @@ def plan_queue(
             addr, kind = best_email(founder)
             if not addr or (only_kinds and kind not in only_kinds):
                 continue
-            subject = fill(tpl.get("subject") or "", company, founder, tpl)
+            subject = subject_for(company, tpl, founder)
             body = fill(tpl.get("body") or "", company, founder, tpl)
+            variant = outreach_variant(company)
             messages.append(
                 {
                     "id": str(uuid.uuid4()),
@@ -237,6 +295,7 @@ def plan_queue(
                     "founder": founder.get("name") or "",
                     "to": addr,
                     "email_kind": kind,
+                    "angle": variant,
                     "subject": subject,
                     "body": body,
                     "send_at": t.isoformat(),
