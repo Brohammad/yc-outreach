@@ -256,13 +256,16 @@ def fill(text: str, company: dict, founder: dict, tpl: dict, *, variant: str | N
         "role_aim": variant_pick(tpl, "role_aim", variant),
         "stack_pitch": variant_pick(tpl, "stack_pitch", variant),
         "proof_line": tpl.get("proof_line") or "",
-        "value_prop": variant_pick(tpl, "value_prop", variant),
+        "value_prop": "",  # filled below
         "keralam_tie": keralam_tie(company),
     }
 
     def repl(m: re.Match) -> str:
         k = m.group(1)
         return vars_.get(k, m.group(0)) if k in vars_ else m.group(0)
+
+    vp_t = variant_pick(tpl, "value_prop", variant)
+    vars_["value_prop"] = re.sub(r"\{(\w+)\}", repl, vp_t) if vp_t else ""
 
     out = re.sub(r"\{(\w+)\}", repl, text or "")
     keep = []
