@@ -48,7 +48,7 @@ footer{color:var(--muted);font-size:13px;margin-top:32px}
   <h2>2. Email template</h2>
   <label class="f">Subject<input data-k="subject"></label>
   <label class="f" style="margin-top:10px">Body<textarea data-k="body"></textarea></label>
-  <p class="ph" id="vars">Click to insert: <code>{first_name}</code><code>{company}</code><code>{one_liner}</code><code>{batch}</code><code>{my_name}</code><code>{portfolio}</code><code>{github}</code><code>{resume}</code>
+  <p class="ph" id="vars">Click to insert: <code>{first_name}</code><code>{company}</code><code>{one_liner}</code><code>{batch}</code><code>{hook}</code><code>{industry_niche}</code><code>{role_aim}</code><code>{stack_pitch}</code><code>{proof_line}</code><code>{my_name}</code><code>{portfolio}</code><code>{github}</code><code>{resume}</code>
   &nbsp;<button id="reset" type="button">Reset template</button></p>
   <p class="ph">Lines like <code>resume: {resume}</code> are dropped when you leave that field empty. Email labels: <span class="badge valid">verified</span> / <span class="badge unknown">unverified</span> come from Apify (step 4), <span class="badge site">on site</span> is listed on the company's website, <span class="badge guess">guess</span> is the most common pattern (right about 80% of the time) and may bounce.</p>
 </section>
@@ -89,19 +89,23 @@ footer{color:var(--muted);font-size:13px;margin-top:32px}
 </main>
 <script>
 const DEFAULTS = {
-  my_name: "", portfolio: "", github: "", resume: "",
-  subject: "interested in {company}",
+  my_name: "Aabid Mohamed", portfolio: "", github: "https://github.com/Brohammad-coder", resume: "",
+  role_aim: "a founding or early backend role where I own APIs, data, and reliability from day one",
+  stack_pitch: "FastAPI, PostgreSQL, Docker, auth, and production LLM workflows (LangChain, transformers, eval + guardrails)",
+  proof_line: "NIT Calicut '25 · shipping at PwC · built ML/LLM product flows at School Hack.AI",
+  subject: "{company} — backend + LLM engineer ({batch})",
   body: `Hey {first_name},
 
-saw {company} and {one_liner} really stood out.
+{hook}
 
-[1-2 lines about you: what you're doing now and what you've built]
+I'm Aabid — full-stack engineer with a backend/ML spine ({proof_line}). I work in {stack_pitch}. I'm deliberately targeting early teams; I'm reaching out because {company} maps to {role_aim}.
 
-[1 line on relevant experience: stack, projects, open source]
+Concrete angle for you: I can take ownership of the services and data model behind {one_liner} — shipping fast without the "rewrite at 10k users" tax.
 
-would love to explore if there's a role at {company}.
+If you're opening eng capacity this quarter, could we do 15 minutes this week? I'll come with relevant work ({github}) and questions that respect your time.
 
-- {my_name}
+Best,
+{my_name}
 portfolio: {portfolio}
 github: {github}
 resume: {resume}`
@@ -140,10 +144,33 @@ function contacts(c) {
   return [...(c.founders || [])].sort((a, b) => (RANK[best(a).kind] - RANK[best(b).kind]) || (!/ceo/i.test(a.title) - !/ceo/i.test(b.title)));
 }
 
+function industryFocus(c) {
+  const ind = c.industry || "";
+  if (ind.includes("->")) return ind.split("->").pop().trim();
+  if (c.tags?.length) return c.tags[0];
+  return ind || "your market";
+}
+function companyHook(c) {
+  const name = c.name || "you", batch = c.batch || "your batch";
+  const one = (c.one_liner || "").replace(/\.$/, "").trim();
+  const niche = industryFocus(c);
+  if (one && niche && niche !== "your market") {
+    return `I've been tracking ${name} since ${batch} — ${one.toLowerCase()} is a focused bet in ${niche.toLowerCase()}, and it's the kind of product I'd want backend ownership on early.`;
+  }
+  if (one) {
+    return `The way you're framing ${one.toLowerCase()} at ${name} is the stage I optimize for: real users, tight loops, and infra that keeps up with the product.`;
+  }
+  return `${name} kept landing on my short list while I filtered for teams where engineers ship backend and ML together, not slide decks.`;
+}
 function fill(text, c) {
   const f = contacts(c)[0] || { name: "" };
-  const vars = { first_name: f.name.split(" ")[0] || "there", company: c.name, one_liner: (c.one_liner || "what you're building").replace(/\.$/, "").toLowerCase(),
-                 batch: c.batch, my_name: tpl.my_name, portfolio: tpl.portfolio, github: tpl.github, resume: tpl.resume };
+  const vars = {
+    first_name: f.name.split(" ")[0] || "there", company: c.name,
+    one_liner: (c.one_liner || "what you're building").replace(/\.$/, "").toLowerCase(),
+    batch: c.batch, industry_niche: industryFocus(c).toLowerCase(), hook: companyHook(c),
+    my_name: tpl.my_name, portfolio: tpl.portfolio, github: tpl.github, resume: tpl.resume,
+    role_aim: tpl.role_aim, stack_pitch: tpl.stack_pitch, proof_line: tpl.proof_line,
+  };
   const out = text.replace(/\{(\w+)\}/g, (m, k) => k in vars ? vars[k] : m);
   return out.split("\n").filter(l => !/^\s*[\w ]+:\s*$/.test(l)).join("\n");
 }
@@ -373,8 +400,9 @@ $("vars").addEventListener("click", e => {
   el.dispatchEvent(new Event("input"));
 });
 $("reset").onclick = () => {
-  tpl.subject = DEFAULTS.subject; tpl.body = DEFAULTS.body; store.set(KEY, tpl);
-  document.querySelector('[data-k="subject"]').value = tpl.subject; document.querySelector('[data-k="body"]').value = tpl.body; update();
+  Object.assign(tpl, DEFAULTS); store.set(KEY, tpl);
+  document.querySelectorAll("[data-k]").forEach(el => { if (el.dataset.k in tpl) el.value = tpl[el.dataset.k]; });
+  update();
 };
 $("load").onclick = loadBatch;
 $("more").onclick = loadMore;

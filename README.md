@@ -117,7 +117,7 @@ python3 apify_enrich.py --input yc_founders.json --out yc_founders_enriched     
 
 `outreach_mailer.py` builds a send queue from scraped JSON and actually delivers mail when
 `run` is due (stdlib `smtplib`, cron-friendly). Copy `outreach_template.example.json` to
-`outreach_template.json`, fill in your details, then:
+`outreach_template.json`, add your portfolio/resume links if you have them, then:
 
 ```
 cp outreach_template.example.json outreach_template.json   # edit subject/body

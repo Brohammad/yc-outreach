@@ -14,6 +14,39 @@ import outreach_mailer as om  # noqa: E402
 
 
 class OutreachMailerTests(unittest.TestCase):
+    def test_company_hook_uses_one_liner_and_industry(self):
+        company = {
+            "name": "Acme",
+            "batch": "Winter 2024",
+            "one_liner": "Widget routing for factories.",
+            "industry": "B2B -> Supply Chain and Logistics",
+        }
+        hook = om.company_hook(company)
+        self.assertIn("Acme", hook)
+        self.assertIn("widget routing", hook.lower())
+
+    def test_fill_includes_hook_and_profile_fields(self):
+        company = {
+            "name": "Acme",
+            "batch": "W24",
+            "one_liner": "Widgets.",
+            "industry": "B2B -> Logistics",
+        }
+        founder = {"name": "Ann Lee"}
+        tpl = {
+            "my_name": "Aabid Mohamed",
+            "portfolio": "",
+            "github": "https://github.com/Brohammad-coder",
+            "resume": "",
+            "role_aim": "early backend",
+            "stack_pitch": "FastAPI",
+            "proof_line": "NITC",
+            "body": "{hook}\n{proof_line}",
+        }
+        body = om.fill(tpl["body"], company, founder, tpl)
+        self.assertIn("NITC", body)
+        self.assertIn("Acme", body)
+
     def test_fill_drops_empty_placeholder_lines(self):
         company = {"name": "Acme", "batch": "W24", "one_liner": "Widgets."}
         founder = {"name": "Ann Lee"}

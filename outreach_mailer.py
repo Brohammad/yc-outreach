@@ -112,6 +112,38 @@ def best_email(founder: dict) -> tuple[str, str]:
     return "", "none"
 
 
+def industry_focus(company: dict) -> str:
+    ind = (company.get("industry") or "").strip()
+    if "->" in ind:
+        return ind.split("->")[-1].strip()
+    tags = company.get("tags")
+    if isinstance(tags, list) and tags:
+        t = tags[0]
+        return t if isinstance(t, str) else str(t)
+    return ind or "your market"
+
+
+def company_hook(company: dict) -> str:
+    name = company.get("name") or "you"
+    batch = company.get("batch") or "your batch"
+    one = (company.get("one_liner") or "").strip().rstrip(".")
+    niche = industry_focus(company)
+    if one and niche and niche != "your market":
+        return (
+            f"I've been tracking {name} since {batch} — {one.lower()} is a focused bet in "
+            f"{niche.lower()}, and it's the kind of product I'd want backend ownership on early."
+        )
+    if one:
+        return (
+            f"The way you're framing {one.lower()} at {name} is the stage I optimize for: "
+            f"real users, tight loops, and infra that keeps up with the product."
+        )
+    return (
+        f"{name} kept landing on my short list while I filtered for teams where engineers ship "
+        f"backend and ML together, not slide decks."
+    )
+
+
 def pick_founder(company: dict, all_founders: bool) -> list[dict]:
     founders = list(company.get("founders") or [])
     if not founders:
@@ -136,10 +168,15 @@ def fill(text: str, company: dict, founder: dict, tpl: dict) -> str:
         "company": company.get("name") or "",
         "one_liner": one_liner,
         "batch": company.get("batch") or "",
+        "industry_niche": industry_focus(company).lower(),
+        "hook": company_hook(company),
         "my_name": tpl.get("my_name") or "",
         "portfolio": tpl.get("portfolio") or "",
         "github": tpl.get("github") or "",
         "resume": tpl.get("resume") or "",
+        "role_aim": tpl.get("role_aim") or "",
+        "stack_pitch": tpl.get("stack_pitch") or "",
+        "proof_line": tpl.get("proof_line") or "",
     }
 
     def repl(m: re.Match) -> str:
