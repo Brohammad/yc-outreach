@@ -48,7 +48,58 @@ HEADER_ALIASES = {
     "url": "website",
     "website_url": "website",
     "city": "location",
+    "public_email": "email",
 }
+
+
+EMAIL_IN_PUBLIC_RE = re.compile(r"([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})")
+OUTREACH_LOCAL_PREFIXES = (
+    "careers",
+    "jobs",
+    "hr",
+    "hiring",
+    "talent",
+    "recruit",
+    "hello",
+    "contact",
+    "letstalk",
+    "connect",
+    "info",
+    "india",
+)
+
+
+def parse_public_emails_field(value: str) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for part in (value or "").split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        m = EMAIL_IN_PUBLIC_RE.search(part.replace("u003e", ""))
+        if not m:
+            continue
+        e = m.group(1).lower()
+        if e not in seen:
+            seen.add(e)
+            out.append(e)
+    return out
+
+
+def pick_outreach_email(emails: list[str]) -> str:
+    if not emails:
+        return ""
+    if len(emails) == 1:
+        return emails[0]
+
+    def rank(e: str) -> tuple[int, str]:
+        local = e.split("@", 1)[0].lower()
+        for i, pref in enumerate(OUTREACH_LOCAL_PREFIXES):
+            if local.startswith(pref) or pref in local:
+                return (i, e)
+        return (len(OUTREACH_LOCAL_PREFIXES), e)
+
+    return min(emails, key=rank)
 
 
 def slugify(name: str) -> str:
@@ -61,7 +112,9 @@ def norm_founder(row: dict) -> dict:
     name = (row.get("founder") or row.get("founder_name") or row.get("name_person") or "").strip()
     if not name and row.get("name") and row.get("name") != company:
         name = row["name"].strip()
-    email = (row.get("email") or row.get("founder_email") or "").strip().lower()
+    raw_public = row.get("public_emails") or ""
+    parsed = parse_public_emails_field(raw_public) if raw_public else []
+    email = (row.get("email") or row.get("founder_email") or pick_outreach_email(parsed) or "").strip().lower()
     if not name and email:
         name = "Founder"
     if not name and not email:
@@ -74,7 +127,9 @@ def norm_founder(row: dict) -> dict:
     if email:
         out["emails_found"] = [email]
         out["apify_email"] = email
-        out["apify_email_status"] = "valid"
+        out["apify_email_status"] = "site"
+    if parsed and len(parsed) > 1:
+        out["public_emails_all"] = parsed
     linkedin = (row.get("linkedin") or row.get("founder_linkedin") or "").strip()
     if linkedin:
         out["linkedin"] = linkedin
@@ -109,6 +164,7 @@ def normalize_company(raw: dict) -> dict:
         "name": name,
         "batch": raw.get("batch") or raw.get("batch_label") or "Kerala startups",
         "location": raw.get("location") or raw.get("city") or "Kerala, India",
+        "scan_status": raw.get("scan_status") or "",
         "website": raw.get("website") or raw.get("url") or "",
         "one_liner": raw.get("one_liner") or raw.get("description") or raw.get("tagline") or "",
         "industry": raw.get("industry") or raw.get("sector") or "",
@@ -138,8 +194,10 @@ def merge_csv_rows(rows: list[dict]) -> list[dict]:
                 if row.get(field) and not base.get(field):
                     base[field] = row[field]
         f = norm_founder({**row, "company": name})
+        if not f and parse_public_emails_field(row.get("public_emails") or ""):
+            f = norm_founder({**row, "company": name})
         if f and not any(x.get("name") == f.get("name") and (x.get("emails_found") or [""])[0] == (f.get("emails_found") or [""])[0] for x in base["founders"]):
-            base["founders"].append({k: v for k, v in f.items() if v})
+            base["founders"].append({k: v for k, v in f.items() if v and k != "public_emails_all"})
     return list(by_name.values())
 
 
