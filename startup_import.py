@@ -20,6 +20,12 @@ import sys
 
 HERE = pathlib.Path(__file__).parent
 DEFAULT_PRIORITY_CSV = HERE / "kerala_startup_priority_50_emails.csv"
+KERALA_CSV_SET = (
+    ("priority", HERE / "kerala_startup_priority_50_emails.csv"),
+    ("public", HERE / "kerala_all_public_emails.csv"),
+    ("research", HERE / "kerala_research_150.csv"),
+)
+WAVE_RANK = {"priority": 0, "public": 1, "research": 2}
 
 HEADER_ALIASES = {
     "startup": "company",
@@ -121,7 +127,16 @@ def merge_csv_rows(rows: list[dict]) -> list[dict]:
         base = by_name.get(name.lower())
         if not base:
             base = normalize_company({**row, "company": name, "founders": []})
+            if row.get("campaign_wave"):
+                base["campaign_wave"] = row["campaign_wave"]
             by_name[name.lower()] = base
+        else:
+            incoming = row.get("campaign_wave")
+            if incoming and WAVE_RANK.get(incoming, 9) < WAVE_RANK.get(base.get("campaign_wave", "research"), 9):
+                base["campaign_wave"] = incoming
+            for field in ("website", "one_liner", "location", "industry"):
+                if row.get(field) and not base.get(field):
+                    base[field] = row[field]
         f = norm_founder({**row, "company": name})
         if f and not any(x.get("name") == f.get("name") and (x.get("emails_found") or [""])[0] == (f.get("emails_found") or [""])[0] for x in base["founders"]):
             base["founders"].append({k: v for k, v in f.items() if v})
@@ -150,27 +165,66 @@ def load_json(path: pathlib.Path) -> list[dict]:
     return [normalize_company(x) for x in items]
 
 
-def load_csv(path: pathlib.Path) -> list[dict]:
+def read_csv_rows(path: pathlib.Path, *, campaign_wave: str | None = None) -> list[dict]:
     with path.open(newline="", encoding="utf-8-sig") as fh:
         rows = list(csv.DictReader(fh))
     if not rows:
-        sys.exit("CSV is empty")
-    # normalize header keys
+        return []
     cleaned = []
     for row in rows:
         base = {k.strip().lower().replace(" ", "_"): (v or "").strip() for k, v in row.items()}
-        cleaned.append(alias_headers(base))
-    return merge_csv_rows(cleaned)
+        aliased = alias_headers(base)
+        if campaign_wave:
+            aliased["campaign_wave"] = campaign_wave
+        cleaned.append(aliased)
+    return cleaned
+
+
+def load_csv(path: pathlib.Path) -> list[dict]:
+    rows = read_csv_rows(path)
+    if not rows:
+        sys.exit(f"CSV is empty: {path}")
+    return merge_csv_rows(rows)
+
+
+def load_kerala_csv_set() -> list[dict]:
+    rows: list[dict] = []
+    found = False
+    for wave, path in KERALA_CSV_SET:
+        if not path.is_file():
+            continue
+        found = True
+        rows.extend(read_csv_rows(path, campaign_wave=wave))
+    if not found:
+        names = ", ".join(p.name for _, p in KERALA_CSV_SET)
+        sys.exit(f"No Kerala CSV files in repo root. Expected one of: {names}")
+    return merge_csv_rows(rows)
+
+
+def load_csv_paths(paths: list[pathlib.Path]) -> list[dict]:
+    rows: list[dict] = []
+    for p in paths:
+        part = read_csv_rows(p)
+        if not part:
+            sys.exit(f"CSV is empty: {p}")
+        rows.extend(part)
+    return merge_csv_rows(rows)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Import local startup list for outreach_mailer.py")
     src = ap.add_mutually_exclusive_group(required=True)
-    src.add_argument("--csv", type=pathlib.Path, nargs="?", const=DEFAULT_PRIORITY_CSV)
+    src.add_argument("--csv", type=pathlib.Path, nargs="+", help="one or more CSV files")
+    src.add_argument("--kerala-set", action="store_true", help="merge priority + public + research CSVs")
     src.add_argument("--json", type=pathlib.Path)
     ap.add_argument("--out", type=pathlib.Path, default=HERE / "kerala_startups.json")
     a = ap.parse_args()
-    companies = load_csv(a.csv) if a.csv else load_json(a.json)
+    if a.json:
+        companies = load_json(a.json)
+    elif a.kerala_set:
+        companies = load_kerala_csv_set()
+    else:
+        companies = load_csv_paths(a.csv)
     a.out.write_text(json.dumps(companies, indent=2, ensure_ascii=False) + "\n")
     n_founders = sum(len(c.get("founders") or []) for c in companies)
     print(f"Wrote {len(companies)} companies, {n_founders} founders → {a.out}", file=sys.stderr)

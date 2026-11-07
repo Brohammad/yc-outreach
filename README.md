@@ -118,7 +118,7 @@ python3 apify_enrich.py --input yc_founders.json --out yc_founders_enriched     
 Your own list (CSV or JSON) is first-class — same mailer and templates as YC data.
 
 ```
-python3 startup_import.py --csv kerala_startups.csv --out kerala_startups.json
+python3 startup_import.py --kerala-set   # merges priority + public + research CSVs
 python3 startup_enrich.py --input kerala_startups.json --out kerala_startups_enriched.json
 python3 outreach_mailer.py plan --input kerala_startups_enriched.json --template outreach_template.json \\
   --start "..." --every 20m --queue outreach_queue.json

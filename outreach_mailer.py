@@ -337,6 +337,12 @@ def plan_queue(
 def cmd_plan(a: argparse.Namespace) -> None:
     tpl = json.loads(pathlib.Path(a.template).read_text())
     companies = json.loads(pathlib.Path(a.input).read_text())
+    wave = (getattr(a, "wave", None) or "").strip().lower()
+    if wave:
+        companies = [c for c in companies if (c.get("campaign_wave") or "") == wave]
+        if not companies:
+            sys.exit(f"No companies with campaign_wave={wave!r} in {a.input}")
+    companies.sort(key=lambda c: (0 if c.get("campaign_wave") == "priority" else 1, c.get("name") or ""))
     if a.limit:
         companies = companies[: a.limit]
     start = parse_when(a.start)
@@ -458,6 +464,7 @@ def main() -> None:
     p_plan.add_argument("--only-email", default="", help="comma list: valid,unknown,site,guess")
     p_plan.add_argument("--merge", action="store_true", help="append to existing queue, skip duplicate pending slugs")
     p_plan.add_argument("--dry-run", action="store_true")
+    p_plan.add_argument("--wave", default="", help="e.g. priority — only that campaign_wave from import")
     p_plan.set_defaults(func=cmd_plan)
 
     p_run = sub.add_parser("run", help="send messages that are due (for cron)")

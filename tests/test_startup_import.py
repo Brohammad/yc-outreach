@@ -32,5 +32,14 @@ class StartupImportTests(unittest.TestCase):
         self.assertEqual(c["founders"][0]["emails_found"], ["a@x.com"])
 
 
+    def test_merge_campaign_wave_priority_wins(self):
+        rows = [
+            {"company": "Acme", "campaign_wave": "research", "founder": "A", "email": "a@acme.test"},
+            {"company": "Acme", "campaign_wave": "priority", "founder": "A", "email": "a@acme.test"},
+        ]
+        merged = si.merge_csv_rows(rows)
+        self.assertEqual(merged[0]["campaign_wave"], "priority")
+
+
 if __name__ == "__main__":
     unittest.main()
