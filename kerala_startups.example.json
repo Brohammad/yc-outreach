@@ -1,0 +1,18 @@
+[
+  {
+    "slug": "example-kochi-saas",
+    "name": "Example Kochi SaaS",
+    "location": "Kochi, Kerala, India",
+    "website": "https://example.com",
+    "one_liner": "B2B workflow tool for clinics",
+    "industry": "B2B -> SaaS",
+    "source": "kerala_list",
+    "founders": [
+      {
+        "name": "An Example",
+        "title": "CEO",
+        "emails_found": ["founder@example.com"]
+      }
+    ]
+  }
+]

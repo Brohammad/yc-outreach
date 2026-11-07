@@ -113,6 +113,22 @@ python3 yc_scraper.py --batches "Winter 2024" "Summer 2024" --out yc_founders   
 python3 apify_enrich.py --input yc_founders.json --out yc_founders_enriched      # needs APIFY_TOKEN
 ```
 
+### Kerala / local startup list (not YC)
+
+Your own list (CSV or JSON) is first-class — same mailer and templates as YC data.
+
+```
+python3 startup_import.py --csv kerala_startups.csv --out kerala_startups.json
+python3 startup_enrich.py --input kerala_startups.json --out kerala_startups_enriched.json
+python3 outreach_mailer.py plan --input kerala_startups_enriched.json --template outreach_template.json \\
+  --start "..." --every 20m --queue outreach_queue.json
+```
+
+CSV columns (flexible headers): `company`, `website`, `location`, `one_liner`, `founder`, `email`, `title`, `linkedin`.
+One row per founder; repeat `company` to add co-founders. See `kerala_startups.example.json`.
+
+Optional: `apify_enrich.py --input kerala_startups_enriched.json --out kerala_startups_enriched.json` for verified emails.
+
 ### Automated scheduled sending (SMTP)
 
 `outreach_mailer.py` builds a send queue from scraped JSON and actually delivers mail when

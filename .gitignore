@@ -11,3 +11,6 @@ yc_founders*.csv
 *_apify_raw.json
 outreach_queue.json
 outreach_template.json
+kerala_startups.json
+kerala_startups_enriched.json
+kerala_startups*.csv

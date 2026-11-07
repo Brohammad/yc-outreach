@@ -12,5 +12,5 @@
   "value_prop_ml": "Concrete angle for you: I can tighten the loop on {one_liner} — datasets, offline evals, prompt/guardrail iteration, and APIs that keep latency and cost predictable.",
   "subject_backend": "{company} — early backend engineer ({batch})",
   "subject_ml": "{company} — ML/LLM engineer ({batch})",
-  "body": "Hey {first_name},\n\n{hook}\n\nI'm Aabid — engineer with a backend/ML spine ({proof_line}). I work in {stack_pitch}. I'm deliberately targeting early teams; I'm reaching out because {company} maps to {role_aim}.\n\n{value_prop}\n\nIf you're opening eng capacity this quarter, could we do 15 minutes this week? I'll come with relevant work ({github}) and questions that respect your time.\n\nBest,\n{my_name}\nportfolio: {portfolio}\ngithub: {github}\nresume: {resume}"
+  "body": "Hey {first_name},\n\n{hook}\n\n{keralam_tie}\n\nI'm Aabid — engineer with a backend/ML spine ({proof_line}). I work in {stack_pitch}. I'm deliberately targeting early teams; I'm reaching out because {company} maps to {role_aim}.\n\n{value_prop}\n\nIf you're opening eng capacity this quarter, could we do 15 minutes this week? I'll come with relevant work ({github}) and portfolio ({portfolio}) and questions that respect your time.\n\nBest,\n{my_name}\ngithub: {github}\nresume: {resume}"
 }

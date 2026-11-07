@@ -104,6 +104,8 @@ const DEFAULTS = {
 
 {hook}
 
+{keralam_tie}
+
 I'm Aabid — engineer with a backend/ML spine ({proof_line}). I work in {stack_pitch}. I'm deliberately targeting early teams; I'm reaching out because {company} maps to {role_aim}.
 
 {value_prop}
@@ -150,6 +152,16 @@ function contacts(c) {
   return [...(c.founders || [])].sort((a, b) => (RANK[best(a).kind] - RANK[best(b).kind]) || (!/ceo/i.test(a.title) - !/ceo/i.test(b.title)));
 }
 
+const KERALAM_RE = /kerala|keralam|kochi|cochin|ernakulam|thiruvananthapuram|trivandrum|kozhikode|calicut|thrissur|kollam|palakkad|malappuram|alappuzha|kannur|kottayam/i;
+function isKeralamCompany(c) {
+  if ((c.source || "").toLowerCase() === "kerala_list") return true;
+  return KERALAM_RE.test([c.location, c.batch, c.name].filter(Boolean).join(" "));
+}
+function keralamTie(c) {
+  return isKeralamCompany(c)
+    ? "I'm based in Kerala (NIT Calicut) — it's motivating to reach out to teams building from the same ecosystem."
+    : "";
+}
 function companyBlob(c) {
   return [c.industry, c.one_liner, c.description, ...(c.tags || [])].filter(Boolean).join(" ");
 }
@@ -206,10 +218,10 @@ function fill(text, c) {
     one_liner: (c.one_liner || "what you're building").replace(/\.$/, "").toLowerCase(),
     batch: c.batch, industry_niche: industryFocus(c).toLowerCase(),
     my_name: tpl.my_name, portfolio: tpl.portfolio, github: tpl.github, resume: tpl.resume,
-    proof_line: tpl.proof_line, ...vf,
+    proof_line: tpl.proof_line, keralam_tie: keralamTie(c), ...vf,
   };
   const out = text.replace(/\{(\w+)\}/g, (m, k) => k in vars ? vars[k] : m);
-  return out.split("\n").filter(l => !/^\s*[\w ]+:\s*$/.test(l)).join("\n");
+  return out.split("\n").filter(l => l.trim() && !/^\s*[\w ]+:\s*$/.test(l)).join("\n");
 }
 function subjectFor(c) {
   const v = outreachVariant(c);

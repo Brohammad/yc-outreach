@@ -46,6 +46,11 @@ ML_SIGNALS = re.compile(
     r"generative|computer vision|deep learning|transformer|embedding|inference|foundation model)\b",
     re.I,
 )
+KERALAM_RE = re.compile(
+    r"kerala|keralam|kochi|cochin|ernakulam|thiruvananthapuram|trivandrum|kozhikode|calicut|"
+    r"thrissur|kollam|palakkad|malappuram|alappuzha|kannur|kottayam",
+    re.I,
+)
 
 
 def load_dotenv() -> None:
@@ -115,6 +120,24 @@ def best_email(founder: dict) -> tuple[str, str]:
     if guesses:
         return guesses[0].lower(), "guess"
     return "", "none"
+
+
+def is_keralam_company(company: dict) -> bool:
+    if (company.get("source") or "").lower() in ("kerala_list", "keralam", "kerala"):
+        return True
+    blob = " ".join(
+        [company.get("location") or "", company.get("batch") or "", company.get("name") or ""]
+    )
+    return bool(KERALAM_RE.search(blob))
+
+
+def keralam_tie(company: dict) -> str:
+    if not is_keralam_company(company):
+        return ""
+    return (
+        "I'm based in Kerala (NIT Calicut) — it's motivating to reach out to teams building from "
+        "the same ecosystem."
+    )
 
 
 def company_text_blob(company: dict) -> str:
@@ -234,6 +257,7 @@ def fill(text: str, company: dict, founder: dict, tpl: dict, *, variant: str | N
         "stack_pitch": variant_pick(tpl, "stack_pitch", variant),
         "proof_line": tpl.get("proof_line") or "",
         "value_prop": variant_pick(tpl, "value_prop", variant),
+        "keralam_tie": keralam_tie(company),
     }
 
     def repl(m: re.Match) -> str:
@@ -244,6 +268,8 @@ def fill(text: str, company: dict, founder: dict, tpl: dict, *, variant: str | N
     keep = []
     for line in out.splitlines():
         if re.match(r"^\s*[\w ]+:\s*$", line):
+            continue
+        if not line.strip():
             continue
         keep.append(line)
     return "\n".join(keep)
@@ -421,7 +447,8 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p_plan = sub.add_parser("plan", help="build or extend the send queue from scraped JSON")
-    p_plan.add_argument("--input", default="yc_founders_enriched.json")
+    p_plan.add_argument("--input", default="kerala_startups_enriched.json",
+                        help="founder JSON: kerala_startups_enriched.json or yc_founders_enriched.json")
     p_plan.add_argument("--template", default="outreach_template.json")
     p_plan.add_argument("--queue", default="outreach_queue.json")
     p_plan.add_argument("--start", required=True, help="First send time (ISO-8601)")
