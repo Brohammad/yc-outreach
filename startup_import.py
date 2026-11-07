@@ -19,6 +19,30 @@ import re
 import sys
 
 HERE = pathlib.Path(__file__).parent
+DEFAULT_PRIORITY_CSV = HERE / "kerala_startup_priority_50_emails.csv"
+
+HEADER_ALIASES = {
+    "startup": "company",
+    "startup_name": "company",
+    "company_name": "company",
+    "organisation": "company",
+    "organization": "company",
+    "contact_email": "email",
+    "founder_email": "email",
+    "ceo_email": "email",
+    "email_address": "email",
+    "e_mail": "email",
+    "contact_name": "founder",
+    "founder_name": "founder",
+    "contact": "founder",
+    "ceo": "founder",
+    "description": "one_liner",
+    "tagline": "one_liner",
+    "sector": "industry",
+    "url": "website",
+    "website_url": "website",
+    "city": "location",
+}
 
 
 def slugify(name: str) -> str:
@@ -27,11 +51,20 @@ def slugify(name: str) -> str:
 
 
 def norm_founder(row: dict) -> dict:
+    company = (row.get("company") or "").strip()
     name = (row.get("founder") or row.get("founder_name") or row.get("name_person") or "").strip()
-    if not name or name == row.get("company"):
+    if not name and row.get("name") and row.get("name") != company:
+        name = row["name"].strip()
+    email = (row.get("email") or row.get("founder_email") or "").strip().lower()
+    if not name and email:
+        name = "Founder"
+    if not name and not email:
+        return {}
+    if name == company:
+        name = "Founder" if email else ""
+    if not name:
         return {}
     out = {"name": name, "title": (row.get("title") or row.get("founder_title") or "").strip() or None}
-    email = (row.get("email") or row.get("founder_email") or "").strip().lower()
     if email:
         out["emails_found"] = [email]
         out["apify_email"] = email
@@ -48,7 +81,7 @@ def normalize_company(raw: dict) -> dict:
         raise ValueError("company missing name")
     slug = (raw.get("slug") or raw.get("id") or slugify(name)).strip()
     founders = list(raw.get("founders") or [])
-    if not founders and (raw.get("founder") or raw.get("founder_name")):
+    if not founders:
         f = norm_founder(raw)
         if f:
             founders = [f]
@@ -90,9 +123,20 @@ def merge_csv_rows(rows: list[dict]) -> list[dict]:
             base = normalize_company({**row, "company": name, "founders": []})
             by_name[name.lower()] = base
         f = norm_founder({**row, "company": name})
-        if f and not any(x.get("name") == f.get("name") for x in base["founders"]):
+        if f and not any(x.get("name") == f.get("name") and (x.get("emails_found") or [""])[0] == (f.get("emails_found") or [""])[0] for x in base["founders"]):
             base["founders"].append({k: v for k, v in f.items() if v})
     return list(by_name.values())
+
+
+def alias_headers(row: dict) -> dict:
+    out: dict[str, str] = {}
+    for k, v in row.items():
+        key = HEADER_ALIASES.get(k, k)
+        if key == "founder" and k == "name" and row.get("company") and v == row.get("company"):
+            continue
+        if key not in out or not out[key]:
+            out[key] = v
+    return out
 
 
 def load_json(path: pathlib.Path) -> list[dict]:
@@ -114,14 +158,15 @@ def load_csv(path: pathlib.Path) -> list[dict]:
     # normalize header keys
     cleaned = []
     for row in rows:
-        cleaned.append({k.strip().lower().replace(" ", "_"): (v or "").strip() for k, v in row.items()})
+        base = {k.strip().lower().replace(" ", "_"): (v or "").strip() for k, v in row.items()}
+        cleaned.append(alias_headers(base))
     return merge_csv_rows(cleaned)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Import local startup list for outreach_mailer.py")
     src = ap.add_mutually_exclusive_group(required=True)
-    src.add_argument("--csv", type=pathlib.Path)
+    src.add_argument("--csv", type=pathlib.Path, nargs="?", const=DEFAULT_PRIORITY_CSV)
     src.add_argument("--json", type=pathlib.Path)
     ap.add_argument("--out", type=pathlib.Path, default=HERE / "kerala_startups.json")
     a = ap.parse_args()
